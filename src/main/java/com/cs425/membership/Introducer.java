@@ -4,17 +4,19 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
+import java.net.UnknownHostException;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Introducer extends BaseServer{
 
-    public Introducer(String host, int port){
+    public Introducer(int port) throws UnknownHostException {
         super();
-        this.self = new Member(host, port, 0);
+        this.self = new Member(InetAddress.getLocalHost().getHostName(), port, 0);
     }
 
     @Override

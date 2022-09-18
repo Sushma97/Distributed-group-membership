@@ -1,5 +1,8 @@
 package com.cs425;
 
+import com.cs425.membership.BaseServer;
+import com.cs425.membership.Introducer;
+import com.fasterxml.jackson.databind.ser.Serializers;
 import com.sun.media.sound.InvalidDataException;
 
 
@@ -18,18 +21,24 @@ public class Server {
         }
         try {
             // Create socket
-            server = new ServerSocket(Integer.parseInt(args[0]));
-        } catch (NumberFormatException ex) {
+            if (args.length == 1){
+                new Introducer(Integer.parseInt(args[0])).start();
+            }
+            else{
+                new BaseServer(Integer.parseInt(args[0]), args[1], Integer.parseInt(args[2]));
+            }
+//            server = new ServerSocket(Integer.parseInt(args[0]));
+        } catch (NumberFormatException | InterruptedException ex) {
             throw new NumberFormatException("Please enter valid port number");
         }
 
 
         // Unterminating loop
-        while (true) {
-            // Accept a socket connection
-            System.out.println("Waiting for client grep request");
-            // Handles each request in separate thread
-            GrepSocketHandler.respondToGrepRequest(server);
-        }
+//        while (true) {
+//            // Accept a socket connection
+//            System.out.println("Waiting for client grep request");
+//            // Handles each request in separate thread
+//            GrepSocketHandler.respondToGrepRequest(server);
+//        }
     }
 }
