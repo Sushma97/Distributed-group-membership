@@ -7,6 +7,7 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.Date;
 import java.util.List;
 import java.util.Scanner;
 
@@ -19,9 +20,9 @@ public class BaseServer {
     }
 
     public BaseServer(int port, String introducerHost, int introducerPort) throws UnknownHostException {
-        self = new Member(InetAddress.getLocalHost().getHostName(),port,System.currentTimeMillis());
-        System.out.println("New node : " + self.memberString);
-        introducer = new Member(introducerHost, introducerPort, 0);
+        self = new Member(InetAddress.getLocalHost().getHostName(),port,new Date(System.currentTimeMillis()));
+        System.out.println("New node : " + self.memberEntry.toString());
+        introducer = new Member(introducerHost, introducerPort, new Date(0));
     }
 
     public void start() throws IOException, InterruptedException {
@@ -33,7 +34,7 @@ public class BaseServer {
                 Scanner input = new Scanner(new InputStreamReader((client.getInputStream())));
                 input.useDelimiter(("\n"));
                 PrintWriter output = new PrintWriter(new OutputStreamWriter(client.getOutputStream()));
-                output.println(this.self.memberString);
+                output.println(this.self.memberEntry.toString());
                 output.flush();
                 while (input.hasNext()){
                     String newJoin = input.next();

@@ -9,6 +9,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 import java.net.UnknownHostException;
+import java.util.Date;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -16,7 +17,7 @@ public class Introducer extends BaseServer{
 
     public Introducer(int port) throws UnknownHostException {
         super();
-        this.self = new Member(InetAddress.getLocalHost().getHostName(), port, 0);
+        this.self = new Member(InetAddress.getLocalHost().getHostName(), port, new Date(0));
     }
 
     @Override

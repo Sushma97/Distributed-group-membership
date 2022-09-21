@@ -1,5 +1,7 @@
 package com.cs425.membership.MembershipList;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Random;
 import java.util.TreeSet;
 
@@ -47,6 +49,7 @@ public class MemberList {
         }
         return predecessor == creator ? null : predecessor;
     }
+
 
     /**
      * For gossiping

@@ -12,7 +12,7 @@ public class Member {
     public int port;
     public Date timestamp;
 
-    private MemberListEntry memberEntry;
+    public MemberListEntry memberEntry;
     private MemberList memberList;
 
     public Member(String host, int port, Date timestamp) {

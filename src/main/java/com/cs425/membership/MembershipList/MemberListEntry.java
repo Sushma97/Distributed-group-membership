@@ -17,7 +17,7 @@ public class MemberListEntry implements Serializable, Comparable<MemberListEntry
         this.timestamp = timestamp;
     }
 
-    String getHostname() {
+    public String getHostname() {
         return hostname;
     }
 

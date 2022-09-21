@@ -4,12 +4,7 @@ import java.io.Serializable;
 
 import com.cs425.membership.MembershipList.MemberListEntry;
 
-public class GossipMessage implements Serializable {
-    public enum MessageType {
-        Join,
-        Leave,
-        Crash
-    };
+public class  GossipMessage implements Serializable {
 
     private MessageType messageType;
     private MemberListEntry messageTopic;
