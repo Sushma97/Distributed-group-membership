@@ -7,6 +7,7 @@ import com.cs425.membership.Messages.MessageHandler;
 
 import java.io.IOException;
 import java.net.DatagramSocket;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Sender extends Thread {
@@ -38,20 +39,21 @@ public class Sender extends Thread {
         while(!exit){
             long startTime = System.currentTimeMillis();
             ackReceived.set(false);
-            MemberListEntry member = memberList.getSuccessor();
-            try {
-                ping(member);
-                synchronized (ackReceived) {
-                    ackReceived.wait(startTime + pingTimeOut - System.currentTimeMillis());
+            List<MemberListEntry> successors = memberList.getSuccessors();
+            for (MemberListEntry member: successors) {
+                try {
+                    ping(member);
+                    synchronized (ackReceived) {
+                        ackReceived.wait(startTime + pingTimeOut - System.currentTimeMillis());
+                    }
+                    if (!ackReceived.get()){
+                        memberList.removeEntry(member);
+                        // TODO disseminate crash
+                    }
+                } catch (IOException | InterruptedException e) {
+                    e.printStackTrace();
                 }
-                if (!ackReceived.get()){
-                    memberList.removeEntry(member);
-                }
-            } catch (IOException | InterruptedException e) {
-                e.printStackTrace();
             }
-
-
         }
     }
 }

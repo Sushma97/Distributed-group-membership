@@ -1,21 +1,20 @@
 package com.cs425.membership.MembershipList;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Random;
+import java.util.List;
 import java.util.TreeSet;
 
 public class MemberList {
 
     private TreeSet<MemberListEntry> memberList;
-    private MemberListEntry creator;
+    private MemberListEntry owner;
 
-    public MemberList(MemberListEntry creator) {
-        assert(creator != null);
+    public MemberList(MemberListEntry owner) {
+        assert(owner != null);
 
         memberList = new TreeSet<>();
-        this.creator = creator;
-        memberList.add(creator);
+        this.owner = owner;
+        memberList.add(owner);
     }
 
     public void addEntry(MemberListEntry newEntry) {
@@ -26,43 +25,67 @@ public class MemberList {
         memberList.remove(entry);
     }
 
+    public boolean hasSuccessor() {
+        return memberList.size() > 1;
+    }
+
+    public boolean hasPredecessor() {
+        return memberList.size() > 1;
+    }
+
     /**
      * For pinging neighbor
-     * @return successor, or null if none exists
+     * @return up to 3 successors, if they exist
      */
-    public MemberListEntry getSuccessor() {
-        MemberListEntry successor = memberList.higher(creator);
+    public List<MemberListEntry> getSuccessors() {
+        List<MemberListEntry> successors = new ArrayList<>();
+
+        MemberListEntry successor = getSuccessor(owner);
+        
+        for (int i = 0; i < 3 && successor != null; i++) {
+            successors.add(successor);
+            successor = getSuccessor(successor);
+        }
+
+        assert(successors.size() <= 3);
+        return successors;
+    }
+
+    /**
+     * Gets successor of entry such that the successor isn't the member list owner
+     * @param entry the entry to find the successor of
+     * @return entry's successor
+     */
+    private MemberListEntry getSuccessor(MemberListEntry entry) {
+        MemberListEntry successor = memberList.higher(entry);
         if (successor == null) {
             successor = memberList.first();
         }
-        return successor == creator ? null : successor;
+        return successor == entry || successor == owner ? null : successor;
     }
 
     /**
-     * For notifying leaves
-     * @return predecessor, or null if none exists
+     * @return predecessor, or null if none exist
      */
     public MemberListEntry getPredecessor() {
-        MemberListEntry predecessor = memberList.lower(creator);
+        MemberListEntry predecessor = memberList.lower(owner);
         if (predecessor == null) {
             predecessor = memberList.last();
         }
-        return predecessor == creator ? null : predecessor;
+        return predecessor == owner ? null : predecessor;
     }
 
-
-    /**
-     * For gossiping
-     * @return random entry not equal to the list creator
-     */
-    public MemberListEntry getRandomEntry() {
-        int idx;
+    @Override
+    public String toString() {
         MemberListEntry[] memberArray = memberList.toArray(new MemberListEntry[0]);
-        do {
-            Random generator = new Random();
-            idx = generator.nextInt(memberList.size());
-        } while (memberArray[idx] == creator);
-        return memberArray[idx];
+        assert(memberArray.length > 0);
+
+        String stringMemberList = memberArray[0].toString();
+        for (int i = 1; i < memberArray.length; i++) {
+            stringMemberList += "\n" + memberArray[i].toString();
+        }
+
+        return stringMemberList;
     }
     
 }

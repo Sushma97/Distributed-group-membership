@@ -1,33 +1,35 @@
 package com.cs425.membership;
 
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.net.InetAddress;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 
 import java.net.UnknownHostException;
-import java.util.Date;
-import java.util.Scanner;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class Introducer extends BaseServer{
+import com.cs425.membership.MembershipList.MemberListEntry;
+
+public class Introducer {
+
+    Queue<MemberListEntry> recentJoins;
+    int port;
 
     public Introducer(int port) throws UnknownHostException {
-        super();
-        this.self = new Member(InetAddress.getLocalHost().getHostName(), port, new Date(0));
+        this.port = port;
+        recentJoins = new LinkedList<MemberListEntry>();
     }
 
-    @Override
     public void start() throws InterruptedException {
-        Joiner newjoin = new Joiner(this.self.port);
+        Joiner newjoin = new Joiner(this.port);
         newjoin.setDaemon(true);
         newjoin.start();
         // TODO: process to run fault detection. either print membership list, leave or join.
-        newjoin.setEnd();
-        newjoin.join();
+        // newjoin.setEnd();
+        // newjoin.join();
     }
 
     private class Joiner extends Thread {
@@ -52,19 +54,37 @@ public class Introducer extends BaseServer{
 
                 while (!end.get()){
                     Socket request = server.accept();
-                    Scanner input = new Scanner(new InputStreamReader(request.getInputStream()));
-                    input.useDelimiter("\n");
-                    PrintWriter output = new PrintWriter(new OutputStreamWriter(request.getOutputStream()));
-                    String memberId = input.next();
-                    System.out.println("Member joining: " + memberId);
-                    //Send out the membership list
-                    for (String member: membershipList) {
-                        output.println(member);
-                    }
-                    output.flush();
-                    input.close();
-                    membershipList.add(memberId);
 
+                    ObjectInputStream input = new ObjectInputStream(request.getInputStream());
+                    ObjectOutputStream output = new ObjectOutputStream(request.getOutputStream());
+
+                    try {
+                        MemberListEntry newEntry = (MemberListEntry) input.readObject();
+                        recentJoins.add(newEntry);
+                        System.out.println("Member joining: " + newEntry.toString());
+                    } catch (ClassNotFoundException e) {
+                        e.printStackTrace();
+                        continue;
+                    }
+
+                    // Connect to non-faulty process
+                    MemberListEntry groupMember = recentJoins.peek();
+                    while (groupMember != null) {
+                        try {
+                            Socket tryConnection = new Socket(groupMember.getHostname(), groupMember.getPort());
+                            tryConnection.close();
+                            break;
+                        } catch (Exception e) {
+                            // remove faulty/left process and choose next one
+                            recentJoins.poll();
+                            groupMember = recentJoins.peek();
+                        }
+                    }
+
+                    output.writeObject(groupMember);
+                    output.flush();
+                    output.close();
+                    input.close();
                 }
             } catch (IOException e) {
                 e.printStackTrace();
