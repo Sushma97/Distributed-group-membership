@@ -56,6 +56,10 @@ public class Member {
 
         this.introducerHost = introducerHost;
         this.introducerPort = introducerPort;
+
+        joined = new AtomicBoolean();
+        end = new AtomicBoolean();
+        ackReceived = new AtomicBoolean();
     }
 
     public String getHost() {
@@ -152,12 +156,14 @@ public class Member {
                 Member.this.mainProtocol();
             }
         });
-        mainProtocolThread.start();
+        // TODO uncomment
+        // mainProtocolThread.start();
 
         joined.set(true);
     }
 
     private MemberListEntry getGroupProcess() throws UnknownHostException, IOException, ClassNotFoundException {
+        System.out.println(introducerHost + ":" + introducerPort);
         Socket introducer = new Socket(introducerHost, introducerPort);
         ObjectInputStream input = new ObjectInputStream(introducer.getInputStream());
         ObjectOutputStream output = new ObjectOutputStream(introducer.getOutputStream());
@@ -204,7 +210,9 @@ public class Member {
 
         // Close resources
         end.set(true);
+        // TODO make sure we can actually end this thread
         mainProtocolThread.join();
+        // TODO make sure we can actually end this thread
         UDPListenerThread.join();
         server.close();
         TCPListenerThread.join();
@@ -302,6 +310,8 @@ public class Member {
                         output.writeObject(memberList);
                     }
                     break;
+                // Do nothing
+                case IntroducerCheckAlive:
                 default:
                     break;
             }

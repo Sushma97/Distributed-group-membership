@@ -12,6 +12,8 @@ import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.cs425.membership.MembershipList.MemberListEntry;
+import com.cs425.membership.Messages.TCPMessage;
+import com.cs425.membership.Messages.TCPMessage.MessageType;
 
 public class Introducer {
 
@@ -25,7 +27,6 @@ public class Introducer {
 
     public void start() throws InterruptedException {
         Joiner newjoin = new Joiner(this.port);
-        newjoin.setDaemon(true);
         newjoin.start();
         // TODO: process to run fault detection. either print membership list, leave or join.
         // newjoin.setEnd();
@@ -40,10 +41,6 @@ public class Introducer {
             end = new AtomicBoolean(
                     false
             );
-        }
-
-        public void setEnd(){
-            end.set(true);
         }
 
         @Override
@@ -72,6 +69,11 @@ public class Introducer {
                     while (groupMember != null) {
                         try {
                             Socket tryConnection = new Socket(groupMember.getHostname(), groupMember.getPort());
+                            ObjectOutputStream tryConnectionOutput = new ObjectOutputStream(tryConnection.getOutputStream());
+
+                            tryConnectionOutput.writeObject(new TCPMessage(MessageType.IntroducerCheckAlive, null));
+
+                            tryConnectionOutput.close();
                             tryConnection.close();
                             break;
                         } catch (Exception e) {
@@ -85,6 +87,7 @@ public class Introducer {
                     output.flush();
                     output.close();
                     input.close();
+                    request.close();
                 }
             } catch (IOException e) {
                 e.printStackTrace();
