@@ -20,9 +20,9 @@ public class BaseServer {
     }
 
     public BaseServer(int port, String introducerHost, int introducerPort) throws UnknownHostException {
-        self = new Member(InetAddress.getLocalHost().getHostName(),port,new Date(System.currentTimeMillis()));
-        System.out.println("New node : " + self.memberEntry.toString());
-        introducer = new Member(introducerHost, introducerPort, new Date(0));
+        self = new Member(InetAddress.getLocalHost().getHostName(), port, introducerHost, introducerPort);
+        System.out.println("New node : " + self.selfEntry.toString());
+        // introducer = new Member(introducerHost, introducerPort, new Date(0));
     }
 
     public void start() throws IOException, InterruptedException {
@@ -30,11 +30,11 @@ public class BaseServer {
         while (true) {
             try {
                 // connect to introducer
-                client = new Socket(this.introducer.host, this.introducer.port);
+                client = new Socket(this.introducer.getHost(), this.introducer.getPort());
                 Scanner input = new Scanner(new InputStreamReader((client.getInputStream())));
                 input.useDelimiter(("\n"));
                 PrintWriter output = new PrintWriter(new OutputStreamWriter(client.getOutputStream()));
-                output.println(this.self.memberEntry.toString());
+                output.println(this.self.selfEntry.toString());
                 output.flush();
                 while (input.hasNext()){
                     String newJoin = input.next();

@@ -37,11 +37,14 @@ public class MemberListEntry implements Serializable, Comparable<MemberListEntry
 
     @Override
     public int compareTo(MemberListEntry other) {
+        // Two entries should have the same timestamp iff they are the same incarnation
+        assert(!other.timestamp.equals(this.timestamp) ^ this.equals(other));
+
         return this.timestamp.compareTo(other.timestamp);
     }
 
     @Override
     public String toString() {
-        return this.hostname + "-" + this.port + "-" + this.timestamp.toString();
+        return this.hostname + "\t" + this.port + "\t" + this.timestamp.toString();
     }
 }
