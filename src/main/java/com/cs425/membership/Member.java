@@ -205,6 +205,7 @@ public class Member {
         // Close resources
         end.set(true);
         mainProtocolThread.join();
+        // TODO
         UDPListenerThread.join();
         server.close();
         TCPListenerThread.join();
