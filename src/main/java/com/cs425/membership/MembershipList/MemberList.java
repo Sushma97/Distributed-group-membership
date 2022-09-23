@@ -1,10 +1,12 @@
 package com.cs425.membership.MembershipList;
 
+import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.TreeSet;
 
-public class MemberList {
+public class MemberList implements Iterable<MemberListEntry>, Serializable {
 
     private TreeSet<MemberListEntry> memberList;
     private MemberListEntry owner;
@@ -17,12 +19,19 @@ public class MemberList {
         memberList.add(owner);
     }
 
-    public void addEntry(MemberListEntry newEntry) {
-        memberList.add(newEntry);
+    public boolean addEntry(MemberListEntry newEntry) {
+        return memberList.add(newEntry);
     }
 
-    public void removeEntry(MemberListEntry entry) {
-        memberList.remove(entry);
+    public void addNewOwner(MemberListEntry newOwner) {
+        memberList.add(newOwner);
+        assert(memberList.contains(newOwner));
+
+        owner = newOwner;
+    }
+
+    public boolean removeEntry(MemberListEntry entry) {
+        return memberList.remove(entry);
     }
 
     public boolean hasSuccessor() {
@@ -77,15 +86,23 @@ public class MemberList {
 
     @Override
     public String toString() {
-        MemberListEntry[] memberArray = memberList.toArray(new MemberListEntry[0]);
-        assert(memberArray.length > 0);
+        String stringMemberList = "Hostname\tPort\tTimestamp\n";
+        stringMemberList += "_________________________";
 
-        String stringMemberList = memberArray[0].toString();
-        for (int i = 1; i < memberArray.length; i++) {
-            stringMemberList += "\n" + memberArray[i].toString();
+        for (MemberListEntry entry: memberList) {
+            stringMemberList += "\n";
+            if (entry.equals(owner)) {
+                stringMemberList += "Self\n\t";
+            }
+            stringMemberList += entry.toString();
         }
 
         return stringMemberList;
+    }
+
+    @Override
+    public Iterator<MemberListEntry> iterator() {
+        return memberList.iterator();
     }
     
 }

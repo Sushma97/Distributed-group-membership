@@ -45,6 +45,6 @@ public class MemberListEntry implements Serializable, Comparable<MemberListEntry
 
     @Override
     public String toString() {
-        return this.hostname + "-" + this.port + "-" + this.timestamp.toString();
+        return this.hostname + "\t" + this.port + "\t" + this.timestamp.toString();
     }
 }
