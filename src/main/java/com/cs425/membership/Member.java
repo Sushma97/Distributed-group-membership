@@ -84,7 +84,7 @@ public class Member {
                         break;
                 
                     case "leave":
-                        leaveGroup();
+                        leaveGroup(true);
                         break;
                 
                     case "list_mem":
@@ -219,14 +219,16 @@ public class Member {
         return retrievedList;
     }
 
-    private void leaveGroup() throws IOException, InterruptedException {
+    private void leaveGroup(boolean sendMessage) throws IOException, InterruptedException {
         // Do nothing if not joined
         if (!joined.get()) {
             return;
         }
 
-        // Disseminate leave
-        disseminateMessage(new TCPMessage(MessageType.Leave, selfEntry));
+        // Disseminate leave if necessary
+        if (sendMessage) {
+            disseminateMessage(new TCPMessage(MessageType.Leave, selfEntry));
+        }
 
         // Close resources
         end.set(true);
@@ -321,6 +323,17 @@ public class Member {
                     }
                     break;
                 case Crash:
+                    if (selfEntry.equals(message.getSubjectEntry())) {
+                        // False crash of this node detected
+                        System.out.println("\nFalse positive crash of this node detected. Stopping execution.\n");
+
+                        // Leave group silently
+                        leaveGroup(false);
+
+                        // Command prompt
+                        System.out.print("MemberProcess$ ");
+                        break;
+                    }
                     synchronized (memberList) {
                         if (memberList.removeEntry(message.getSubjectEntry())) {
                             // TODO log crash
@@ -382,12 +395,15 @@ public class Member {
                     // TODO we need to ensure the ack is from the successor we expect
                     // (in case an ACK is received after the timeout)
                     if (!ackReceived.get()) {
+                        // Disseminate message first in case of false positive
+                        disseminateMessage(new TCPMessage(MessageType.Crash, selfEntry));
+
+                        // Then remove entry
                         synchronized (memberList) {
                             if(memberList.removeEntry(member)) {
                                 // TODO log crash
                             }
                         }
-                        disseminateMessage(new TCPMessage(MessageType.Crash, selfEntry));
                     }
                 } catch (IOException | InterruptedException e) {
                     e.printStackTrace();
