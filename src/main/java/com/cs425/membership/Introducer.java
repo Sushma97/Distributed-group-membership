@@ -27,7 +27,6 @@ public class Introducer {
 
     public void start() throws InterruptedException {
         Joiner newjoin = new Joiner(this.port);
-        newjoin.setDaemon(true);
         newjoin.start();
         // TODO: process to run fault detection. either print membership list, leave or join.
         // newjoin.setEnd();
@@ -42,10 +41,6 @@ public class Introducer {
             end = new AtomicBoolean(
                     false
             );
-        }
-
-        public void setEnd(){
-            end.set(true);
         }
 
         @Override
@@ -92,6 +87,7 @@ public class Introducer {
                     output.flush();
                     output.close();
                     input.close();
+                    request.close();
                 }
             } catch (IOException e) {
                 e.printStackTrace();
