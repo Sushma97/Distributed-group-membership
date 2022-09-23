@@ -12,6 +12,8 @@ import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.cs425.membership.MembershipList.MemberListEntry;
+import com.cs425.membership.Messages.TCPMessage;
+import com.cs425.membership.Messages.TCPMessage.MessageType;
 
 public class Introducer {
 
@@ -72,6 +74,11 @@ public class Introducer {
                     while (groupMember != null) {
                         try {
                             Socket tryConnection = new Socket(groupMember.getHostname(), groupMember.getPort());
+                            ObjectOutputStream tryConnectionOutput = new ObjectOutputStream(tryConnection.getOutputStream());
+
+                            tryConnectionOutput.writeObject(new TCPMessage(MessageType.IntroducerCheckAlive, null));
+
+                            tryConnectionOutput.close();
                             tryConnection.close();
                             break;
                         } catch (Exception e) {

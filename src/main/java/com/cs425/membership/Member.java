@@ -302,6 +302,8 @@ public class Member {
                         output.writeObject(memberList);
                     }
                     break;
+                // Do nothing
+                case IntroducerCheckAlive:
                 default:
                     break;
             }
