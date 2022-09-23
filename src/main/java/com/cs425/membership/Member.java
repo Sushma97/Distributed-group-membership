@@ -74,7 +74,9 @@ public class Member {
         BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
         while(true) {
             try {
+                System.out.print("MemberProcess$ ");
                 String command = stdin.readLine();
+                System.out.println();
 
                 switch (command) {
                     case "join":
@@ -86,11 +88,19 @@ public class Member {
                         break;
                 
                     case "list_mem":
-                        System.out.println(memberList);
+                        if (joined.get()) {
+                            System.out.println(memberList);
+                        } else {
+                            System.out.println("Not joined");
+                        }
                         break;
                 
                     case "self_id":
-                        System.out.println(selfEntry);
+                        if (joined.get()) {
+                            System.out.println(selfEntry);
+                        } else {
+                            System.out.println("Not joined");
+                        }
                         break;
                 
                     default:
@@ -100,6 +110,7 @@ public class Member {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            System.out.println();
         }
     }
 
@@ -124,6 +135,7 @@ public class Member {
             memberList.addNewOwner(selfEntry);
         } else {
             // This is the first member of the group
+            System.out.println("First member of group");
             memberList = new MemberList(selfEntry);
         }
 
@@ -143,7 +155,8 @@ public class Member {
                 Member.this.UDPListener();
             }
         });
-        UDPListenerThread.start();
+        // TODO uncomment
+        // UDPListenerThread.start();
 
         // Communicate join
         disseminateMessage(new TCPMessage(MessageType.Join, selfEntry));
@@ -163,21 +176,28 @@ public class Member {
     }
 
     private MemberListEntry getGroupProcess() throws UnknownHostException, IOException, ClassNotFoundException {
-        System.out.println(introducerHost + ":" + introducerPort);
+        System.out.println("Connecting to introducer at " + introducerHost + ":" + introducerPort);
         Socket introducer = new Socket(introducerHost, introducerPort);
-        ObjectInputStream input = new ObjectInputStream(introducer.getInputStream());
+        System.out.println("Connected to " + introducer.toString());
         ObjectOutputStream output = new ObjectOutputStream(introducer.getOutputStream());
+        ObjectInputStream input = new ObjectInputStream(introducer.getInputStream());
+        System.out.println("IO streams created");
 
         // Send self entry to introducer
         output.writeObject(selfEntry);
+        output.flush();
+        System.out.println("Wrote self entry");
 
         // receive running process
         MemberListEntry runningProcess = (MemberListEntry) input.readObject();
+        System.out.println("Received group process");
 
         // Close resources
         output.close();
         input.close();
         introducer.close();
+
+        System.out.println("Connection to introducer closed");
 
         return runningProcess;
     }
@@ -218,6 +238,8 @@ public class Member {
         TCPListenerThread.join();
 
         // TODO log own leave time
+
+        memberList = null;
 
         joined.set(false);
     }

@@ -92,7 +92,7 @@ public class MemberList implements Iterable<MemberListEntry>, Serializable {
         for (MemberListEntry entry: memberList) {
             stringMemberList += "\n";
             if (entry.equals(owner)) {
-                stringMemberList += "Self\n\t";
+                stringMemberList += "Self: ";
             }
             stringMemberList += entry.toString();
         }
