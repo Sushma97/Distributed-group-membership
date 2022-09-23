@@ -50,14 +50,16 @@ public class Introducer {
                 server = new ServerSocket(this.port);
 
                 while (!end.get()){
+                    System.out.println("Waiting for request at " + server.toString());
                     Socket request = server.accept();
-
-                    ObjectInputStream input = new ObjectInputStream(request.getInputStream());
+                    System.out.println("Connection established on port " + request.getLocalPort() + " with " + request.toString());
                     ObjectOutputStream output = new ObjectOutputStream(request.getOutputStream());
+                    ObjectInputStream input = new ObjectInputStream(request.getInputStream());
+                    System.out.println("IO Streams created");
 
+                    MemberListEntry newEntry;
                     try {
-                        MemberListEntry newEntry = (MemberListEntry) input.readObject();
-                        recentJoins.add(newEntry);
+                        newEntry = (MemberListEntry) input.readObject();
                         System.out.println("Member joining: " + newEntry.toString());
                     } catch (ClassNotFoundException e) {
                         e.printStackTrace();
@@ -88,6 +90,8 @@ public class Introducer {
                     output.close();
                     input.close();
                     request.close();
+
+                    recentJoins.add(newEntry);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
