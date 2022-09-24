@@ -192,6 +192,7 @@ public class Member {
 
         // Request membership list
         output.writeObject(new TCPMessage(MessageType.MemberListRequest, selfEntry));
+        output.flush();
         MemberList retrievedList = (MemberList) input.readObject();
 
         // Close resources
@@ -246,6 +247,7 @@ public class Member {
 
                     // Send message
                     output.writeObject(message);
+                    output.flush();
 
                     // Close resources
                     output.close();
@@ -327,6 +329,7 @@ public class Member {
                 case MemberListRequest:
                     synchronized (memberList) {
                         output.writeObject(memberList);
+                        output.flush();
                     }
                     break;
                 // Do nothing

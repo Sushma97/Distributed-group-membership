@@ -74,6 +74,7 @@ public class Introducer {
                             ObjectOutputStream tryConnectionOutput = new ObjectOutputStream(tryConnection.getOutputStream());
 
                             tryConnectionOutput.writeObject(new TCPMessage(MessageType.IntroducerCheckAlive, null));
+                            tryConnectionOutput.flush();
 
                             tryConnectionOutput.close();
                             tryConnection.close();
