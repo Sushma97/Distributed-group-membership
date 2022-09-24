@@ -1,4 +1,4 @@
-package com.cs425;
+package com.cs425.grep;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;

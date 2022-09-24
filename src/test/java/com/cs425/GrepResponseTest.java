@@ -2,6 +2,7 @@ package com.cs425;
 
 import java.util.Arrays;
 
+import com.cs425.grep.GrepResponse;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;

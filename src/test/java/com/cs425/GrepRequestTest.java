@@ -1,9 +1,12 @@
 package com.cs425;
 
-import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.*;
 
+import com.cs425.grep.Client;
+import com.cs425.grep.ClientThread;
+import com.cs425.grep.GrepRequest;
+import com.cs425.grep.GrepResponse;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;

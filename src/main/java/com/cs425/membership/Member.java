@@ -1,24 +1,15 @@
 package com.cs425.membership;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.net.DatagramSocket;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.UnknownHostException;
+import com.cs425.membership.MembershipList.MemberList;
+import com.cs425.membership.MembershipList.MemberListEntry;
+import com.cs425.membership.Messages.TCPMessage;
+import com.cs425.membership.Messages.TCPMessage.MessageType;
+
+import java.io.*;
+import java.net.*;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.cs425.membership.MembershipList.MemberList;
-import com.cs425.membership.MembershipList.MemberListEntry;
-import com.cs425.membership.Messages.Message;
-import com.cs425.membership.Messages.MessageHandler;
-import com.cs425.membership.Messages.TCPMessage;
-import com.cs425.membership.Messages.TCPMessage.MessageType;
 
 public class Member {
 
@@ -26,7 +17,7 @@ public class Member {
     private String host;
     private int port;
     private Date timestamp;
-    
+    private final long protocolTime = 1 * 1000;
     private String introducerHost;
     private int introducerPort;
 
@@ -149,15 +140,6 @@ public class Member {
         });
         TCPListenerThread.start();
 
-        UDPListenerThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Member.this.UDPListener();
-            }
-        });
-        // TODO uncomment
-        // UDPListenerThread.start();
-
         // Communicate join
         disseminateMessage(new TCPMessage(MessageType.Join, selfEntry));
         // TODO log own join time
@@ -170,7 +152,8 @@ public class Member {
             }
         });
         // TODO uncomment
-        // mainProtocolThread.start();
+        mainProtocolThread.setDaemon(true);
+        mainProtocolThread.start();
 
         joined.set(true);
     }
@@ -235,7 +218,8 @@ public class Member {
         // TODO make sure we can actually end this thread
         mainProtocolThread.join();
         // TODO make sure we can actually end this thread
-        UDPListenerThread.join();
+
+//        UDPListenerThread.join();
         server.close();
         TCPListenerThread.join();
 
@@ -247,7 +231,7 @@ public class Member {
     }
 
     // Uses fire-and-forget paradigm
-    private void disseminateMessage(TCPMessage message) {
+    public void disseminateMessage(TCPMessage message) {
         synchronized (memberList) {
             for (MemberListEntry entry: memberList) {
                 // Don't send a message to ourself
@@ -361,59 +345,90 @@ public class Member {
     }
 
     // For receiving UDP messages and responding
-    private void UDPListener() {
-        try{
-            Object packet = null;
+
+
+
+
+    // For sending pings and checking ack
+
+    private void mainProtocol() {
+        try {
+            socket = new DatagramSocket(selfEntry.getPort());
+            Receiver receiver = new Receiver(socket, selfEntry, ackReceived);
+            receiver.setDaemon(true);
+            receiver.start();
             while(!end.get()) {
-                packet = UDPProcessing.receivePacket(socket);
-                System.out.println("UDP Listener " + System.currentTimeMillis() + " waiting for next message");
+                List<MemberListEntry> successors = memberList.getSuccessors();
+                long startTime = System.currentTimeMillis();
+                for (MemberListEntry member: successors) {
+                    new SenderProcess(ackReceived, member, 800).start();
+                }
+                sleepThread(startTime);
             }
-            processMsg(packet);
-        }
-        catch (IOException | ClassNotFoundException e){
+            receiver.end();
+            socket.close();
+        }catch (SocketException e) {
             e.printStackTrace();
         }
     }
 
-    public void processMsg(Object packet){
 
-    }
-
-    // For sending pings and checking ack
-    private void mainProtocol() {
-        while(!end.get()) {
-            List<MemberListEntry> successors = memberList.getSuccessors();
-            for (MemberListEntry member: successors) {
-                long startTime = System.currentTimeMillis();
-                ackReceived.set(false);
-
-                try {
-                    ping(member);
-                    
-                    ackReceived.wait(500);
-
-                    // TODO we need to ensure the ack is from the successor we expect
-                    // (in case an ACK is received after the timeout)
-                    if (!ackReceived.get()) {
-                        // Disseminate message first in case of false positive
-                        disseminateMessage(new TCPMessage(MessageType.Crash, selfEntry));
-
-                        // Then remove entry
-                        synchronized (memberList) {
-                            if(memberList.removeEntry(member)) {
-                                // TODO log crash
-                            }
-                        }
-                    }
-                } catch (IOException | InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
+    private void sleepThread(long startTime) {
+        try {
+            Thread.sleep(startTime+protocolTime-System.currentTimeMillis());
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 
-    private void ping(MemberListEntry member) throws IOException {
-        Message msg = MessageHandler.pingMessage(member.toString()).getMessage();
-        UDPProcessing.sendPacket(socket, msg, member.getHostname(), member.getPort());
+    public class SenderProcess extends Thread {
+        public MemberListEntry member;
+        private AtomicBoolean ackReceived;
+        private long timeOut;
+
+        private void ping(MemberListEntry member, MemberListEntry sender) throws IOException {
+            TCPMessage message = new TCPMessage(TCPMessage.MessageType.Ping, sender);
+            UDPProcessing.sendPacket(socket, message, member.getHostname(), member.getPort());
+        }
+
+        public SenderProcess(AtomicBoolean ackReceived, MemberListEntry member, long timeOut)  {
+            this.member = member;
+            this.ackReceived = ackReceived;
+            this.timeOut = timeOut;
+        }
+
+        @Override
+        public void run() {
+
+            try {
+                ackReceived.set(false);
+                ping(member, selfEntry);
+
+                synchronized (ackReceived) {
+                    ackReceived.wait(timeOut);
+                }
+
+                // TODO we need to ensure the ack is from the successor we expect
+                // (in case an ACK is received after the timeout)
+                if (!ackReceived.get()) {
+                    // Disseminate message first in case of false positive
+                    disseminateMessage(new TCPMessage(TCPMessage.MessageType.Crash, member));
+
+                    // Then remove entry
+                    synchronized (memberList) {
+                        if (memberList.removeEntry(member)) {
+                            // TODO log crash
+                        }
+                    }
+                }
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
     }
+
+
+
+
 }

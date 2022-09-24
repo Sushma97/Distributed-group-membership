@@ -1,4 +1,4 @@
-package com.cs425;
+package com.cs425.grep;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;

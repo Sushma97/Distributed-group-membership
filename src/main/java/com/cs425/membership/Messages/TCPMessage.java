@@ -9,6 +9,8 @@ public class TCPMessage implements Serializable {
         Join,
         Leave,
         Crash,
+        Ping,
+        Ack,
         MemberListRequest,
         IntroducerCheckAlive
     }

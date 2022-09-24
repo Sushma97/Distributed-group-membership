@@ -1,4 +1,4 @@
-package com.cs425;
+package com.cs425.grep;
 
 import org.unix4j.Unix4j;
 import org.unix4j.unix.grep.GrepOptionSet_Fcilnvx;
