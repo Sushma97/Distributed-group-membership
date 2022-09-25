@@ -87,7 +87,7 @@ public class Member {
                         }
                         break;
                 
-                    case "self_id":
+                    case "list_self":
                         if (joined.get()) {
                             System.out.println(selfEntry);
                         } else {
@@ -96,7 +96,7 @@ public class Member {
                         break;
                 
                     default:
-                    System.out.println("Unrecognized command, type 'join', 'leave', 'list_mem', or 'self_id'");
+                    System.out.println("Unrecognized command, type 'join', 'leave', 'list_mem', or 'list_self'");
                         break;
                 }
             } catch (IOException e) {
