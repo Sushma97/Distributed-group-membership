@@ -19,6 +19,10 @@ public class MemberList implements Iterable<MemberListEntry>, Serializable {
         memberList.add(owner);
     }
 
+    public int size() {
+        return memberList.size();
+    }
+
     public boolean addEntry(MemberListEntry newEntry) {
         return memberList.add(newEntry);
     }

@@ -47,7 +47,7 @@ public class GrepResponse implements Serializable {
             return;
         }
         String[] filePath = filename.split("/");
-        System.out.println("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\nGrep results for " + filePath[filePath.length - 1] + ":");
+        System.out.println("Grep results for " + filePath[filePath.length - 1] + ":");
         for(String line : lines) {
             System.out.println(line);
         }

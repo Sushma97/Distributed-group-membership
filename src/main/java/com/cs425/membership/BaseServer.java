@@ -8,7 +8,7 @@ public class BaseServer {
 
     public static void main(String[] args) throws Exception {
         if (args.length < 1) {
-            throw new Exception("Not enough arguments");
+            throw new IllegalArgumentException("Not enough arguments");
         }
 
         if (args.length == 1) {

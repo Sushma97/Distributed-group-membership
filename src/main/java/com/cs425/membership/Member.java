@@ -2,8 +2,8 @@ package com.cs425.membership;
 
 import com.cs425.membership.MembershipList.MemberList;
 import com.cs425.membership.MembershipList.MemberListEntry;
-import com.cs425.membership.Messages.TCPMessage;
-import com.cs425.membership.Messages.TCPMessage.MessageType;
+import com.cs425.membership.Messages.Message;
+import com.cs425.membership.Messages.Message.MessageType;
 
 import java.io.*;
 import java.net.*;
@@ -11,6 +11,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.FileHandler;
+import java.util.logging.Handler;
+import java.util.logging.Logger;
 
 public class Member {
 
@@ -40,7 +43,11 @@ public class Member {
     private AtomicBoolean joined;
     private AtomicBoolean end;
 
-    public Member(String host, int port, String introducerHost, int introducerPort) {
+    // Logger
+    public static Logger logger = Logger.getLogger("MemberLogger");
+
+    // Constructor and beginning of functionality
+    public Member(String host, int port, String introducerHost, int introducerPort) throws SecurityException, IOException {
         assert(host != null);
         assert(timestamp != null);
 
@@ -52,6 +59,9 @@ public class Member {
 
         joined = new AtomicBoolean();
         end = new AtomicBoolean();
+
+        Handler fh = new FileHandler("/srv/mp2_logs/member.log");
+        logger.addHandler(fh);
     }
 
     public String getHost() {
@@ -63,6 +73,7 @@ public class Member {
     }
 
     public void start() throws ClassNotFoundException, InterruptedException {
+        logger.info("Member process started");
         BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
         while(true) {
             try {
@@ -112,11 +123,15 @@ public class Member {
             return;
         }
 
+        logger.info("Member process received join command");
+
         end.set(false);
 
         // Initialize incarnation identity
         this.timestamp = new Date();
         this.selfEntry = new MemberListEntry(host, port, timestamp);
+
+        logger.info("New entry created: " + selfEntry);
 
         // Get member already in group
         MemberListEntry groupProcess = getGroupProcess();
@@ -125,9 +140,10 @@ public class Member {
             // Get member list from group member and add self
             memberList = requestMemberList(groupProcess);
             memberList.addNewOwner(selfEntry);
+            logger.info("Retrieved membership list");
         } else {
             // This is the first member of the group
-            System.out.println("First member of group");
+            logger.info("First member of group");
             memberList = new MemberList(selfEntry);
         }
 
@@ -140,10 +156,11 @@ public class Member {
             }
         });
         TCPListenerThread.start();
+        logger.info("TCP Server started");
 
         // Communicate join
-        disseminateMessage(new TCPMessage(MessageType.Join, selfEntry));
-        // TODO log own join time
+        disseminateMessage(new Message(MessageType.Join, selfEntry));
+        logger.info("Process joined");
 
         // Start main protocol
         mainProtocolThread = new Thread(new Runnable() {
@@ -152,36 +169,34 @@ public class Member {
                 Member.this.mainProtocol();
             }
         });
-        // TODO uncomment
         mainProtocolThread.setDaemon(true);
         mainProtocolThread.start();
+        logger.info("Main protocol started");
 
         joined.set(true);
     }
 
     private MemberListEntry getGroupProcess() throws UnknownHostException, IOException, ClassNotFoundException {
-        System.out.println("Connecting to introducer at " + introducerHost + ":" + introducerPort);
         Socket introducer = new Socket(introducerHost, introducerPort);
-        System.out.println("Connected to " + introducer.toString());
+        logger.info("Connected to " + introducer.toString());
         ObjectOutputStream output = new ObjectOutputStream(introducer.getOutputStream());
         ObjectInputStream input = new ObjectInputStream(introducer.getInputStream());
-        System.out.println("IO streams created");
 
         // Send self entry to introducer
         output.writeObject(selfEntry);
         output.flush();
-        System.out.println("Wrote self entry");
+
+        logger.info("JOIN: Sent " + ObjectSize.sizeInBytes(selfEntry) + " bytes over TCP to introducer");
 
         // receive running process
         MemberListEntry runningProcess = (MemberListEntry) input.readObject();
-        System.out.println("Received group process");
 
         // Close resources
         input.close();
         output.close();
         introducer.close();
 
-        System.out.println("Connection to introducer closed");
+        logger.info("Connection to introducer closed");
 
         return runningProcess;
     }
@@ -193,8 +208,12 @@ public class Member {
 
 
         // Request membership list
-        output.writeObject(new TCPMessage(MessageType.MemberListRequest, selfEntry));
+        Message message = new Message(MessageType.MemberListRequest, selfEntry);
+
+        output.writeObject(message);
         output.flush();
+        logger.info("JOIN: Sent " + ObjectSize.sizeInBytes(message) + " bytes over TCP for membership list request");
+
         MemberList retrievedList = (MemberList) input.readObject();
 
         // Close resources
@@ -211,31 +230,33 @@ public class Member {
             return;
         }
 
+        logger.info("Leave command received");
+
         // Disseminate leave if necessary
         if (sendMessage) {
-            disseminateMessage(new TCPMessage(MessageType.Leave, selfEntry));
+            disseminateMessage(new Message(MessageType.Leave, selfEntry));
+            logger.info("Request to leave disseminated");
         }
 
         // Close resources
         end.set(true);
-        // TODO make sure we can actually end this thread
-        mainProtocolThread.join();
-        // TODO make sure we can actually end this thread
 
-//        UDPListenerThread.join();
+        mainProtocolThread.join();
+        logger.info("Main Protocol stopped");
+
         server.close();
         TCPListenerThread.join();
-
-        // TODO log own leave time
+        logger.info("TCP server closed");
 
         memberList = null;
         selfEntry = null;
-
+        
+        logger.info("Process left");
         joined.set(false);
     }
 
     // Uses fire-and-forget paradigm
-    public void disseminateMessage(TCPMessage message) {
+    public void disseminateMessage(Message message) {
         synchronized (memberList) {
             for (MemberListEntry entry: memberList) {
                 // Don't send a message to ourself
@@ -252,6 +273,20 @@ public class Member {
                     // Send message
                     output.writeObject(message);
                     output.flush();
+
+                    switch (message.getMessageType()) {
+                        case Join:
+                            logger.info("JOIN: Sent " + ObjectSize.sizeInBytes(message) + " bytes over TCP for dissemination");
+                            break;
+                        case Leave:
+                            logger.info("LEAVE: Sent " + ObjectSize.sizeInBytes(message) + " bytes over TCP for dissemination");
+                            break;
+                        case Crash:
+                            logger.info("CRASH: Sent " + ObjectSize.sizeInBytes(message) + " bytes over TCP for dissemination");
+                            break;
+                        default:
+                            assert(false);
+                    }
 
                     // Close resources
                     input.close();
@@ -271,6 +306,7 @@ public class Member {
         while (!end.get()) {
             try {
                 Socket client = server.accept();
+                logger.info("TCP connection established from " + client.toString());
 
                 // Process message in own thread to prevent race condition on membership list
                 synchronized (TCPListenerThread) {
@@ -283,7 +319,6 @@ public class Member {
                     processMessageThread.start();
                 }
             } catch(SocketException e) {
-                System.out.println("TCP server socket closed.");
                 break;
             } catch (Exception e) {
                 continue;
@@ -298,28 +333,32 @@ public class Member {
             ObjectInputStream input = new ObjectInputStream(client.getInputStream());
 
             // Recieve message
-            TCPMessage message = (TCPMessage) input.readObject();
+            Message message = (Message) input.readObject();
 
             // perform appropriate action
             switch(message.getMessageType()) {
                 case Join:
+                    logger.info("Received message for process joining group: " + message.getSubjectEntry());
                     synchronized (memberList) {
                         if (memberList.addEntry(message.getSubjectEntry())) {
-                            // TODO log join
+                            logger.info("Process added to membership list: " + message.getSubjectEntry());
                         }
                     }
                     break;
                 case Leave:
+                    logger.info("Received message for process leaving group: " + message.getSubjectEntry());
                     synchronized (memberList) {
                         if (memberList.removeEntry(message.getSubjectEntry())) {
-                            // TODO log leave
+                            logger.info("Process removed from membership list: " + message.getSubjectEntry());
                         }
                     }
                     break;
                 case Crash:
+                    logger.warning("Message received for crashed process: " + message.getSubjectEntry());
                     if (selfEntry.equals(message.getSubjectEntry())) {
                         // False crash of this node detected
                         System.out.println("\nFalse positive crash of this node detected. Stopping execution.\n");
+                        logger.warning("False positive crash of this node detected. Stopping execution.");
 
                         // Leave group silently
                         leaveGroup(false);
@@ -330,7 +369,7 @@ public class Member {
                     }
                     synchronized (memberList) {
                         if (memberList.removeEntry(message.getSubjectEntry())) {
-                            // TODO log crash
+                            logger.info("Process removed from membership list: " + message.getSubjectEntry());
                         }
                     }
                     break;
@@ -338,6 +377,7 @@ public class Member {
                     synchronized (memberList) {
                         output.writeObject(memberList);
                         output.flush();
+                        logger.info("JOIN: Sent " + ObjectSize.sizeInBytes(message) + " bytes over TCP containing membership list");
                     }
                     break;
                 // Do nothing
@@ -375,6 +415,7 @@ public class Member {
             Receiver receiver = new Receiver(socket, selfEntry, end, ackSignals);
             receiver.setDaemon(true);
             receiver.start();
+            logger.info("UDP Socket opened");
             while(!end.get()) {
                 List<MemberListEntry> successors;
                 synchronized (memberList) {
@@ -388,6 +429,7 @@ public class Member {
                 sleepThread();
             }
             socket.close();
+            logger.info("UDP Socket closed");
             receiver.join();
         }catch (SocketException | InterruptedException e) {
             e.printStackTrace();
@@ -409,7 +451,7 @@ public class Member {
         private long timeOut;
 
         private void ping(MemberListEntry member, MemberListEntry sender) throws IOException {
-            TCPMessage message = new TCPMessage(TCPMessage.MessageType.Ping, sender);
+            Message message = new Message(Message.MessageType.Ping, sender);
             UDPProcessing.sendPacket(socket, message, member.getHostname(), member.getPort());
         }
 
@@ -426,21 +468,26 @@ public class Member {
                 // Ping successor
                 synchronized (ackSignal) {
                     ackSignal.set(false);
+                    logger.info("Pinging " + member);
                     ping(member, selfEntry);
                     ackSignal.wait(timeOut);
                 }
 
-                // Handle ack timeout
+                // Handle ACK timeout
                 if (!ackSignal.get()) {
+                    logger.warning("ACK not received from " + member);
+                    logger.warning("Process failure detected detected: " + member);
                     // Disseminate message first in case of false positive
-                    disseminateMessage(new TCPMessage(TCPMessage.MessageType.Crash, member));
+                    disseminateMessage(new Message(Message.MessageType.Crash, member));
 
                     // Then remove entry
                     synchronized (memberList) {
                         if (memberList.removeEntry(member)) {
-                            // TODO log crash
+                            logger.info("Process removed from membership list: " + member);
                         }
                     }
+                } else {
+                    logger.info("ACK received from " + member);
                 }
             } catch (IOException | InterruptedException e) {
                 e.printStackTrace();
