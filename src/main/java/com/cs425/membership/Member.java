@@ -174,8 +174,8 @@ public class Member {
         System.out.println("Received group process");
 
         // Close resources
-        output.close();
         input.close();
+        output.close();
         introducer.close();
 
         System.out.println("Connection to introducer closed");
@@ -185,8 +185,9 @@ public class Member {
 
     private MemberList requestMemberList(MemberListEntry groupProcess) throws UnknownHostException, IOException, ClassNotFoundException {
         Socket client = new Socket(groupProcess.getHostname(), groupProcess.getPort());
-        ObjectInputStream input = new ObjectInputStream(client.getInputStream());
         ObjectOutputStream output = new ObjectOutputStream(client.getOutputStream());
+        ObjectInputStream input = new ObjectInputStream(client.getInputStream());
+
 
         // Request membership list
         output.writeObject(new TCPMessage(MessageType.MemberListRequest, selfEntry));
@@ -194,8 +195,8 @@ public class Member {
         MemberList retrievedList = (MemberList) input.readObject();
 
         // Close resources
-        output.close();
         input.close();
+        output.close();
         client.close();
 
         return retrievedList;
@@ -243,12 +244,14 @@ public class Member {
                     // Open resources
                     Socket groupMember = new Socket(entry.getHostname(), entry.getPort());
                     ObjectOutputStream output = new ObjectOutputStream(groupMember.getOutputStream());
+                    ObjectInputStream input = new ObjectInputStream(groupMember.getInputStream());
 
                     // Send message
                     output.writeObject(message);
                     output.flush();
 
                     // Close resources
+                    input.close();
                     output.close();
                     groupMember.close();
                 } catch (IOException e) {
@@ -341,8 +344,8 @@ public class Member {
             }
 
             // Close resources
-            output.close();
             input.close();
+            output.close();
             client.close();
         } catch (Exception e) {
             e.printStackTrace();

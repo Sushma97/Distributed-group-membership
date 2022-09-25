@@ -72,10 +72,12 @@ public class Introducer {
                         try {
                             Socket tryConnection = new Socket(groupMember.getHostname(), groupMember.getPort());
                             ObjectOutputStream tryConnectionOutput = new ObjectOutputStream(tryConnection.getOutputStream());
+                            ObjectInputStream tryConnectionInput = new ObjectInputStream(tryConnection.getInputStream());
 
                             tryConnectionOutput.writeObject(new TCPMessage(MessageType.IntroducerCheckAlive, null));
                             tryConnectionOutput.flush();
 
+                            tryConnectionInput.close();
                             tryConnectionOutput.close();
                             tryConnection.close();
                             break;
@@ -88,8 +90,8 @@ public class Introducer {
 
                     output.writeObject(groupMember);
                     output.flush();
-                    output.close();
                     input.close();
+                    output.close();
                     request.close();
 
                     recentJoins.add(newEntry);
