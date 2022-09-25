@@ -7,6 +7,7 @@ import com.cs425.membership.Messages.TCPMessage.MessageType;
 
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -17,7 +18,7 @@ public class Member {
     private String host;
     private int port;
     private Date timestamp;
-    private final long protocolTime = 1 * 1000;
+    private final long protocolTime = 5 * 1000;
     private String introducerHost;
     private int introducerPort;
 
@@ -31,12 +32,10 @@ public class Member {
 
     // Threading resources
     private Thread mainProtocolThread;
-    private Thread UDPListenerThread;
     private Thread TCPListenerThread;
 
     private AtomicBoolean joined;
     private AtomicBoolean end;
-    private AtomicBoolean ackReceived;
 
     public Member(String host, int port, String introducerHost, int introducerPort) {
         assert(host != null);
@@ -50,7 +49,6 @@ public class Member {
 
         joined = new AtomicBoolean();
         end = new AtomicBoolean();
-        ackReceived = new AtomicBoolean();
     }
 
     public String getHost() {
@@ -227,6 +225,7 @@ public class Member {
         // TODO log own leave time
 
         memberList = null;
+        selfEntry = null;
 
         joined.set(false);
     }
@@ -277,6 +276,9 @@ public class Member {
                     });
                     processMessageThread.start();
                 }
+            } catch(SocketException e) {
+                System.out.println("TCP server socket closed.");
+                break;
             } catch (Exception e) {
                 continue;
             }
@@ -357,36 +359,47 @@ public class Member {
     private void mainProtocol() {
         try {
             socket = new DatagramSocket(selfEntry.getPort());
-            Receiver receiver = new Receiver(socket, selfEntry, ackReceived);
+
+            List<AtomicBoolean> ackSignals = new ArrayList<>(3);
+            for (int i = 0; i < 3; i++) {
+                ackSignals.add(new AtomicBoolean());
+            }
+
+
+            Receiver receiver = new Receiver(socket, selfEntry, end, ackSignals);
             receiver.setDaemon(true);
             receiver.start();
             while(!end.get()) {
-                List<MemberListEntry> successors = memberList.getSuccessors();
-                long startTime = System.currentTimeMillis();
-                for (MemberListEntry member: successors) {
-                    new SenderProcess(ackReceived, member, 800).start();
+                List<MemberListEntry> successors;
+                synchronized (memberList) {
+                    successors = memberList.getSuccessors();
+                    receiver.updateAckers(successors);
+
+                    for (int i = 0; i < successors.size(); i++) {
+                        new SenderProcess(ackSignals.get(i), successors.get(i), 500).start();
+                    }
                 }
-                sleepThread(startTime);
+                sleepThread();
             }
-            receiver.end();
             socket.close();
-        }catch (SocketException e) {
+            receiver.join();
+        }catch (SocketException | InterruptedException e) {
             e.printStackTrace();
         }
     }
 
 
-    private void sleepThread(long startTime) {
+    private void sleepThread() {
         try {
-            Thread.sleep(startTime+protocolTime-System.currentTimeMillis());
+            Thread.sleep(protocolTime);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
 
-    public class SenderProcess extends Thread {
+    private class SenderProcess extends Thread {
         public MemberListEntry member;
-        private AtomicBoolean ackReceived;
+        private AtomicBoolean ackSignal;
         private long timeOut;
 
         private void ping(MemberListEntry member, MemberListEntry sender) throws IOException {
@@ -394,9 +407,9 @@ public class Member {
             UDPProcessing.sendPacket(socket, message, member.getHostname(), member.getPort());
         }
 
-        public SenderProcess(AtomicBoolean ackReceived, MemberListEntry member, long timeOut)  {
+        public SenderProcess(AtomicBoolean ackSignal, MemberListEntry member, long timeOut)  {
             this.member = member;
-            this.ackReceived = ackReceived;
+            this.ackSignal = ackSignal;
             this.timeOut = timeOut;
         }
 
@@ -404,16 +417,15 @@ public class Member {
         public void run() {
 
             try {
-                ackReceived.set(false);
-                ping(member, selfEntry);
-
-                synchronized (ackReceived) {
-                    ackReceived.wait(timeOut);
+                // Ping successor
+                synchronized (ackSignal) {
+                    ackSignal.set(false);
+                    ping(member, selfEntry);
+                    ackSignal.wait(timeOut);
                 }
 
-                // TODO we need to ensure the ack is from the successor we expect
-                // (in case an ACK is received after the timeout)
-                if (!ackReceived.get()) {
+                // Handle ack timeout
+                if (!ackSignal.get()) {
                     // Disseminate message first in case of false positive
                     disseminateMessage(new TCPMessage(TCPMessage.MessageType.Crash, member));
 
