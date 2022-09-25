@@ -18,15 +18,18 @@ public class Member {
     private String host;
     private int port;
     private Date timestamp;
-    private final long protocolTime = 5 * 1000;
     private String introducerHost;
     private int introducerPort;
+
+    // Protocol settings
+    private final long PROTOCOL_TIME = 1500;
+    private final int NUM_MONITORS = 1;
 
     // Sockets
     private ServerSocket server;
     private DatagramSocket socket;
 
-    // Membership list and own entry
+    // Membership list and owner entry
     private volatile MemberList memberList;
     public MemberListEntry selfEntry;
 
@@ -363,8 +366,8 @@ public class Member {
         try {
             socket = new DatagramSocket(selfEntry.getPort());
 
-            List<AtomicBoolean> ackSignals = new ArrayList<>(3);
-            for (int i = 0; i < 3; i++) {
+            List<AtomicBoolean> ackSignals = new ArrayList<>(NUM_MONITORS);
+            for (int i = 0; i < NUM_MONITORS; i++) {
                 ackSignals.add(new AtomicBoolean());
             }
 
@@ -375,7 +378,7 @@ public class Member {
             while(!end.get()) {
                 List<MemberListEntry> successors;
                 synchronized (memberList) {
-                    successors = memberList.getSuccessors();
+                    successors = memberList.getSuccessors(NUM_MONITORS);
                     receiver.updateAckers(successors);
 
                     for (int i = 0; i < successors.size(); i++) {
@@ -394,7 +397,7 @@ public class Member {
 
     private void sleepThread() {
         try {
-            Thread.sleep(protocolTime);
+            Thread.sleep(PROTOCOL_TIME);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -445,8 +448,4 @@ public class Member {
         }
 
     }
-
-
-
-
 }

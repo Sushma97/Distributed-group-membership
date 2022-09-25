@@ -43,20 +43,20 @@ public class MemberList implements Iterable<MemberListEntry>, Serializable {
     }
 
     /**
-     * For pinging neighbor
-     * @return up to 3 successors, if they exist
+     * For pinging neighbors
+     * @return up to n successors, if they exist
      */
-    public List<MemberListEntry> getSuccessors() {
+    public List<MemberListEntry> getSuccessors(int n) {
         List<MemberListEntry> successors = new ArrayList<>();
 
         MemberListEntry successor = getSuccessor(owner);
         
-        for (int i = 0; i < 3 && successor != null; i++) {
+        for (int i = 0; i < n && successor != null; i++) {
             successors.add(successor);
             successor = getSuccessor(successor);
         }
 
-        assert(successors.size() <= 3);
+        assert(successors.size() <= n);
         return successors;
     }
 
@@ -86,7 +86,7 @@ public class MemberList implements Iterable<MemberListEntry>, Serializable {
 
     @Override
     public String toString() {
-        String stringMemberList = "Hostname\tPort\tTimestamp\n";
+        String stringMemberList = "Hostname\tPort\tTimestamp (Join)\n";
         stringMemberList += "_________________________";
 
         for (MemberListEntry entry: memberList) {
