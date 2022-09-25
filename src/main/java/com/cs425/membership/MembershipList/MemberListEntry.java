@@ -29,7 +29,18 @@ public class MemberListEntry implements Serializable, Comparable<MemberListEntry
         return timestamp;
     }
 
-    public boolean equals(MemberListEntry other) {
+    @Override
+    public boolean equals(Object otherObj) {
+        if (otherObj == this) {
+            return true;
+        }
+
+        if (!(otherObj instanceof MemberListEntry)) {
+            return false;
+        }
+
+        MemberListEntry other = (MemberListEntry) otherObj;
+
         return this.hostname.equals(other.hostname)
                     && this.port == other.port
                     && this.timestamp.equals(other.timestamp);
