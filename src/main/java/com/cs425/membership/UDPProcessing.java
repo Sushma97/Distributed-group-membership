@@ -10,9 +10,13 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 
+import org.apache.commons.lang3.SerializationUtils;
+
 public class UDPProcessing {
     public static void sendPacket(DatagramSocket socket, Serializable object, String host, int port) throws IOException {
-        socket.send(convertToPacket(object, InetAddress.getByName(host), port));
+        DatagramPacket packet = convertToPacket(object, InetAddress.getByName(host), port);
+        socket.send(packet);
+        Member.logger.info("Sent " + packet.getLength() + " bytes over UDP");
     }
 
     public static Object receivePacket(DatagramSocket socket) throws IOException, ClassNotFoundException {
@@ -24,29 +28,12 @@ public class UDPProcessing {
     }
 
     private static DatagramPacket convertToPacket(Serializable object, InetAddress host, int port) throws IOException {
-        ByteArrayOutputStream byteOutput = new ByteArrayOutputStream();
-        ObjectOutputStream objectOutput = new ObjectOutputStream(byteOutput);
-
-        objectOutput.writeObject(object);
-        objectOutput.flush();
-        byte[] bytes = byteOutput.toByteArray();
-
-        byteOutput.close();
-        objectOutput.close();
-
+        byte[] bytes = SerializationUtils.serialize(object);
         return new DatagramPacket(bytes, bytes.length, host, port);
     }
 
     private static Object convertFromPacket(DatagramPacket packet) throws ClassNotFoundException, IOException {
-        ByteArrayInputStream byteInput = new ByteArrayInputStream(packet.getData());
-        ObjectInputStream objectInput = new ObjectInputStream(byteInput);
-
-        Object obj = objectInput.readObject();
-
-        byteInput.close();
-        objectInput.close();
-
-        return obj;
+        return SerializationUtils.deserialize(packet.getData());
     }
 
 }

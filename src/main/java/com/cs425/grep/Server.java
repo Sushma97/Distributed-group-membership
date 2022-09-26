@@ -1,7 +1,5 @@
 package com.cs425.grep;
 
-import com.sun.media.sound.InvalidDataException;
-
 import java.io.IOException;
 import java.net.ServerSocket;
 
@@ -13,7 +11,7 @@ public class Server {
 
     public static void main(String[] args) throws IOException {
         if (args.length != 1) {
-            throw new InvalidDataException("Please input the port number server should run on");
+            throw new IllegalArgumentException("Please input the port number server should run on");
         }
         server = new ServerSocket(Integer.parseInt(args[0]));
 

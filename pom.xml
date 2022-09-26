@@ -23,7 +23,7 @@
       <artifactId>mockito-all</artifactId>
       <version>1.10.19</version>
       <scope>test</scope>
-  </dependency>
+    </dependency>
     <dependency>
       <groupId>org.unix4j</groupId>
       <artifactId>unix4j-command</artifactId>
@@ -39,6 +39,11 @@
       <artifactId>jackson-databind</artifactId>
       <version>2.13.3</version>
     </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <version>3.12.0</version>
+  </dependency>
   </dependencies>
   <build>
     <plugins>

@@ -50,7 +50,12 @@ public class Client {
         // Client sends out GrepRequest over sockets to each server
         for (MachineLocation machine : list) {
             // Initialize grep request
-            GrepRequest request = new GrepRequest(grepPattern, machine.getLogFile(), cli.optionList);
+            GrepRequest request;
+            if (cli.filename != null) {
+                request = new GrepRequest(grepPattern, cli.filename, cli.optionList);
+            } else {
+                request = new GrepRequest(grepPattern, machine.getLogFile(), cli.optionList);
+            }
             System.out.println("Sending the grepRequest " + request);
             // Send request and print results
             GrepSocketHandler.grepRequest(machine.getIp(), machine.getPort(), request, latch);
@@ -69,6 +74,7 @@ public class Client {
         public List<String> optionList;
         // Variable to hold the pattern to search for
         public String pattern;
+        public String filename;
 
         public CommandLineInput(String[] args) throws ParseException {
             Options options = generateOptions();
@@ -77,6 +83,7 @@ public class Client {
             CommandLine cmd = parser.parse(options, args);
             optionList = new ArrayList<>();
             pattern = null;
+            filename = null;
             // Pattern is required
             if (!cmd.hasOption("pattern")) {
                 throw new ParseException("search input is a required argument");
@@ -106,6 +113,9 @@ public class Client {
             if (cmd.hasOption("pattern")) {
                 pattern = cmd.getOptionValue("pattern");
             }
+            if (cmd.hasOption("file")) {
+                filename = cmd.getOptionValue("file");
+            }
 
         }
     }
@@ -124,8 +134,8 @@ public class Client {
         options.addOption(new Option("n", "grep option to prefix each line of output with the line number within its input file"));
         options.addOption(new Option("l", "grep option to print the name of each input file"));
         options.addOption(new Option("x", "grep option to match whole sentence only"));
-        options.addOption(OptionBuilder.withArgName("pattern").hasArg().withDescription("*Required Option* grep string")
-                .create("pattern"));
+        options.addOption(Option.builder().argName("pattern").hasArg().desc("*Required Option* grep string").option("pattern").required().build());
+        options.addOption(Option.builder().argName("file").hasArg().desc("Filename to grep").option("file").build());
         return options;
     }
 
