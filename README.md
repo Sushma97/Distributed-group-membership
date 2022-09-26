@@ -1,92 +1,72 @@
-# MP2_CS425_Membership_Protocol
+# Distributed Group Membership
+
+This project provides the ability to maintain a distributed group membership (failure detector) based on SWIM protocol.
+
+## Design
+We maintain full membership list at each machine and use ring as backbone.
+Apart from introducer, each member has 2 important threads. 
+1. To run a tcp server (to talk to introducer, disseminate join/leave msg) 
+2. Failure detection protocol messages (Ping/Ack) over UDP 
+Our implementation is scalable, since there is no limitation on number of nodes for failure detection.
+Our messages are marshalled. We are converting the message object into byte array. 
+
+### Joining 
+Introducer node is responsible for new machine joining the group but introducer itself is not part of the group. 
+Introducer runs a TCP server thread which listens to incoming join requests and processes each request in a separate thread (concurrent requests are served).
+It maintains a queue of all the joined machines so far. For each join request, introducer checks the queue for any alive machines and provides the details of a machine that is alive over tcp connection to the new machine. 
+The new machine requests (tcp) the machine already part of the group for the latest membership list and adds itself to the membership list. Once it's added successfully, the new machine disseminates its information
+to the rest of the members in the group, so that they can update their membership list. 
+Introducer is fault tolerant and introducer failure only limits new joins i.e, even if introducer fails, the failure detection continues. 
+
+### Leaving
+When a machine is leaving the group, it removes itself from the membership list and disseminates a leave message to the rest of the members of the group, so that they can update their membership list. 
+
+### Failure detection
+For a protocol time of 1.5 seconds, each member pings its successor and waits for certain time period for acknowledgement. If it does not receive any acknowledgement in the given time period then it disseminates a crash message to the 
+rest of the members to update their membership list. Since it has removed the crashed member entry, in the next iteration, it pings the successor of the crashed member. If there are 3 consecutive crashes, then in a period of 4.5 seconds, it is detected. 
+Thus, we meet the 5s completeness for 3 consecutive failures using just 1 monitor per node. It is then updated in all the machines quickly, since we are disseminating the crash message. 
+Single machine failure is detected within 1.5s if it is a good network, if there is network latency, it will be detected in next time period. If we have more than 4 failures, it is detected after 5s. 
+
+Since join/leave/crash uses dissemination to update membership list in the group, it takes less than a second, hence 3 consecutive failure is reflected within 6 seconds across all groups. 
+We can achieve the completeness also by monitoring 3 successors for a period of 5s. Our code provides the flexibility to alter protocol time and number of successor/predecessor to be monitored. 
+
+We have used TreeSet for membership list for insertion, deletion and search to be faster. 
+
+### Rejoin
+Membership list stores the ip address, port and joining timestamp (incarnation number) of each of the members. 
+Since we are treating crash and leave as the same, by removing the member from membership list, for rejoin it's the same process as joining a new machine. 
+
+### Logging
 
 
 
-## Getting started
+## Instructions
+- STEP 1: Run the introducer
+  * ssh into the machine ```ssh <NETID>@fa22-cs425-ggXX.cs.illinois.edu``` 
+  * Clone the project ```https://gitlab.engr.illinois.edu/sushmam3/mp2_cs425_membership_protocol.git```
+  * Build the project ```mvn -DskipTests package```
+  * cd to scripts folder and run the introducer.sh ```./introducer.sh <port-number>```
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+- STEP 2: Run the member
+  * ssh into the machine ```ssh <NETID>@fa22-cs425-ggXX.cs.illinois.edu```
+  * Clone the project ```https://gitlab.engr.illinois.edu/sushmam3/mp2_cs425_membership_protocol.git```
+  * Build the project ```mvn -DskipTests package```
+  * cd to scripts folder and run the member.sh ```./member.sh <port-number> <introducer-host-name> <introducer-port-number>```
+  * On the command prompt, there are three options. 
+    * ```join``` - join the network
+    * ```leave``` - leave the network
+    * ```list_mem``` - Display the membership list
+    * ```list_self``` - Display self information
+  
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
 
-## Add your files
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
 
-```
-cd existing_repo
-git remote add origin https://gitlab.engr.illinois.edu/sushmam3/mp2_cs425_membership_protocol.git
-git branch -M main
-git push -uf origin main
-```
 
-## Integrate with your tools
 
-- [ ] [Set up project integrations](https://gitlab.engr.illinois.edu/sushmam3/mp2_cs425_membership_protocol/-/settings/integrations)
 
-## Collaborate with your team
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
 
-## Test and Deploy
 
-Use the built-in continuous integration in GitLab.
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
 
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.

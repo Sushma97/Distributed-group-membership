@@ -399,10 +399,6 @@ public class Member {
     }
 
     // For receiving UDP messages and responding
-
-
-
-
     // For sending pings and checking ack
 
     private void mainProtocol() {
@@ -429,21 +425,12 @@ public class Member {
                         new SenderProcess(ackSignals.get(i), successors.get(i), 500).start();
                     }
                 }
-                sleepThread();
+                Thread.sleep(PROTOCOL_TIME);
             }
             socket.close();
             logger.info("UDP Socket closed");
             receiver.join();
         }catch (SocketException | InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-
-
-    private void sleepThread() {
-        try {
-            Thread.sleep(PROTOCOL_TIME);
-        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
