@@ -25,7 +25,7 @@ public class Introducer {
     int port;
 
     // Logger
-    public static Logger logger = Logger.getLogger("MemberLogger");
+    public static Logger logger = Logger.getLogger("IntroducerLogger");
 
     public Introducer(int port) throws SecurityException, IOException {
         this.port = port;
