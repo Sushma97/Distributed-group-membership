@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
 import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 public class Member {
 
@@ -61,6 +62,8 @@ public class Member {
         end = new AtomicBoolean();
 
         Handler fh = new FileHandler("/srv/mp2_logs/member.log");
+        fh.setFormatter(new SimpleFormatter());
+        logger.setUseParentHandlers(false);
         logger.addHandler(fh);
     }
 

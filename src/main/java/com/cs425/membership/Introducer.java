@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
 import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 import com.cs425.membership.MembershipList.MemberListEntry;
 import com.cs425.membership.Messages.Message;
@@ -31,6 +32,8 @@ public class Introducer {
         recentJoins = new LinkedList<MemberListEntry>();
 
         Handler fh = new FileHandler("/srv/mp2_logs/introducer.log");
+        fh.setFormatter(new SimpleFormatter());
+        logger.setUseParentHandlers(false);
         logger.addHandler(fh);
     }
 
