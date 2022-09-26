@@ -10,12 +10,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * Daemon process to receive Ping and send ACK
+ */
 public class Receiver extends Thread {
     private DatagramSocket socket;
     public MemberListEntry selfEntry;
     private AtomicBoolean end;
-    // private AtomicBoolean ackSignal;
-
     List<MemberListEntry> ackers;
     List<AtomicBoolean> ackSignals;
 
@@ -24,7 +25,6 @@ public class Receiver extends Thread {
         this.selfEntry = selfEntry;
         this.end = end;
         this.ackSignals = ackSignals;
-
         this.ackers = new ArrayList<>();
     }
 
@@ -32,6 +32,7 @@ public class Receiver extends Thread {
     public void run() {
         while(!this.end.get()){
             try {
+                //Receive data packet and process
                 Message packet = (Message) UDPProcessing.receivePacket(socket);
                 processMsg(packet);
             } catch(SocketException e) {
@@ -43,12 +44,14 @@ public class Receiver extends Thread {
         }
     }
 
+    // Update the members from whom we have to receive ACK
     public void updateAckers(List<MemberListEntry> newAckers) {
         synchronized (ackers) {
             ackers = newAckers;
         }
     }
 
+    // Send ACK if we receive PING and if we receive ACK, set the acknowledgment signal to true for the respective member.
     public void processMsg(Message message) throws IOException {
         MemberListEntry subject = message.getSubjectEntry();
         switch(message.getMessageType()){
@@ -75,6 +78,7 @@ public class Receiver extends Thread {
 
     }
 
+    // Send ACK
     private void ack(MemberListEntry member, MemberListEntry sender) throws IOException {
         Message message = new Message(Message.MessageType.Ack, sender);
         UDPProcessing.sendPacket(socket, message, member.getHostname(), member.getPort());

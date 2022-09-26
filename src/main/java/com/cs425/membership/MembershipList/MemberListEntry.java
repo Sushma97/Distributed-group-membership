@@ -3,9 +3,13 @@ package com.cs425.membership.MembershipList;
 import java.io.Serializable;
 import java.util.Date;
 
+/**
+ * Individual member details
+ */
 public class MemberListEntry implements Serializable, Comparable<MemberListEntry> {
     private String hostname;
     private int port;
+    // Distinguishes Incarnation
     private Date timestamp;
 
     public MemberListEntry(String hostname, int port, Date timestamp) {

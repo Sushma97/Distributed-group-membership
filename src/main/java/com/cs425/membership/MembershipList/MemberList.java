@@ -6,9 +6,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.TreeSet;
 
+/**
+ * Group membership list.
+ */
 public class MemberList implements Iterable<MemberListEntry>, Serializable {
 
+    // TreeSet has lower insertion and deletion time
     private TreeSet<MemberListEntry> memberList;
+    // self details
     private MemberListEntry owner;
 
     public MemberList(MemberListEntry owner) {

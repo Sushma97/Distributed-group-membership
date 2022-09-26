@@ -4,8 +4,11 @@ import java.io.Serializable;
 
 import com.cs425.membership.MembershipList.MemberListEntry;
 
+/**
+ * Communication message. Contains message type and the member details
+ */
 public class Message implements Serializable {
-    public static enum MessageType {
+    public enum MessageType {
         Join,
         Leave,
         Crash,

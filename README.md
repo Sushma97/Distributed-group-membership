@@ -37,7 +37,7 @@ Membership list stores the ip address, port and joining timestamp (incarnation n
 Since we are treating crash and leave as the same, by removing the member from membership list, for rejoin it's the same process as joining a new machine. 
 
 ### Logging
-
+Logs are located in `/srv/mp2_logs/` with a name of either `introducer.log` or `member.log` depending on what was run. Logs contain membership updates, as well as info on messages.
 
 
 ## Instructions

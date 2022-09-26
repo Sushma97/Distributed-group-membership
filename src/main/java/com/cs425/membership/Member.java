@@ -75,6 +75,7 @@ public class Member {
         return port;
     }
 
+    // Process command line inputs
     public void start() throws ClassNotFoundException, InterruptedException {
         logger.info("Member process started");
         BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
@@ -179,9 +180,10 @@ public class Member {
         joined.set(true);
     }
 
-    private MemberListEntry getGroupProcess() throws UnknownHostException, IOException, ClassNotFoundException {
+    // Fetch member details of member already present in group
+    private MemberListEntry getGroupProcess() throws IOException, ClassNotFoundException {
         Socket introducer = new Socket(introducerHost, introducerPort);
-        logger.info("Connected to " + introducer.toString());
+        logger.info("Connected to " + introducer);
         ObjectOutputStream output = new ObjectOutputStream(introducer.getOutputStream());
         ObjectInputStream input = new ObjectInputStream(introducer.getInputStream());
 
@@ -204,7 +206,8 @@ public class Member {
         return runningProcess;
     }
 
-    private MemberList requestMemberList(MemberListEntry groupProcess) throws UnknownHostException, IOException, ClassNotFoundException {
+    // Fetch membership details from a member already in group
+    private MemberList requestMemberList(MemberListEntry groupProcess) throws IOException, ClassNotFoundException {
         Socket client = new Socket(groupProcess.getHostname(), groupProcess.getPort());
         ObjectOutputStream output = new ObjectOutputStream(client.getOutputStream());
         ObjectInputStream input = new ObjectInputStream(client.getInputStream());
@@ -304,7 +307,6 @@ public class Member {
 
 
     // Thread methods
-
     private void TCPListener() {
         while (!end.get()) {
             try {
@@ -330,6 +332,7 @@ public class Member {
         
     }
 
+    // Process join leave or crash message
     private void processTCPMessage(Socket client) {
         try {
             ObjectOutputStream output = new ObjectOutputStream(client.getOutputStream());
@@ -400,17 +403,15 @@ public class Member {
 
     // For receiving UDP messages and responding
     // For sending pings and checking ack
-
     private void mainProtocol() {
         try {
             socket = new DatagramSocket(selfEntry.getPort());
-
+            // Maintain list of acknowledgements to know which member sent the ACK
             List<AtomicBoolean> ackSignals = new ArrayList<>(NUM_MONITORS);
             for (int i = 0; i < NUM_MONITORS; i++) {
                 ackSignals.add(new AtomicBoolean());
             }
-
-
+            // Receive ping and send ACK
             Receiver receiver = new Receiver(socket, selfEntry, end, ackSignals);
             receiver.setDaemon(true);
             receiver.start();
@@ -418,13 +419,16 @@ public class Member {
             while(!end.get()) {
                 List<MemberListEntry> successors;
                 synchronized (memberList) {
+                    // Get the next successors to send ping to
                     successors = memberList.getSuccessors(NUM_MONITORS);
+                    // Update receiver about the successor information
                     receiver.updateAckers(successors);
-
+                    // Send ping
                     for (int i = 0; i < successors.size(); i++) {
                         new SenderProcess(ackSignals.get(i), successors.get(i), 500).start();
                     }
                 }
+                //Wait for protocol time period
                 Thread.sleep(PROTOCOL_TIME);
             }
             socket.close();
@@ -435,6 +439,7 @@ public class Member {
         }
     }
 
+    // Process to send Pick and wait for ACK
     private class SenderProcess extends Thread {
         public MemberListEntry member;
         private AtomicBoolean ackSignal;

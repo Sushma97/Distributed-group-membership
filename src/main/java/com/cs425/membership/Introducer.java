@@ -1,12 +1,14 @@
 package com.cs425.membership;
 
+import com.cs425.membership.MembershipList.MemberListEntry;
+import com.cs425.membership.Messages.Message;
+import com.cs425.membership.Messages.Message.MessageType;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-
-import java.net.UnknownHostException;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -15,10 +17,9 @@ import java.util.logging.Handler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
-import com.cs425.membership.MembershipList.MemberListEntry;
-import com.cs425.membership.Messages.Message;
-import com.cs425.membership.Messages.Message.MessageType;
-
+/**
+ * Introducer to facilitate node/machine joins
+ */
 public class Introducer {
 
     Queue<MemberListEntry> recentJoins;
@@ -43,6 +44,7 @@ public class Introducer {
         newjoin.start();
     }
 
+    // Each join process is executed in a thread
     private class Joiner extends Thread {
         private int port;
         private AtomicBoolean end;
@@ -61,8 +63,10 @@ public class Introducer {
 
                 while (!end.get()){
                     logger.info("Waiting for request at " + server.toString());
+                    // Accept join request
                     Socket request = server.accept();
                     logger.info("Connection established on port " + request.getLocalPort() + " with " + request.toString());
+                    // Create resources
                     ObjectOutputStream output = new ObjectOutputStream(request.getOutputStream());
                     ObjectInputStream input = new ObjectInputStream(request.getInputStream());
                     logger.info("IO Streams created");
