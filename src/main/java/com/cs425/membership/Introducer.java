@@ -10,27 +10,37 @@ import java.net.UnknownHostException;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.FileHandler;
+import java.util.logging.Handler;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 import com.cs425.membership.MembershipList.MemberListEntry;
-import com.cs425.membership.Messages.TCPMessage;
-import com.cs425.membership.Messages.TCPMessage.MessageType;
+import com.cs425.membership.Messages.Message;
+import com.cs425.membership.Messages.Message.MessageType;
 
 public class Introducer {
 
     Queue<MemberListEntry> recentJoins;
     int port;
 
-    public Introducer(int port) throws UnknownHostException {
+    // Logger
+    public static Logger logger = Logger.getLogger("IntroducerLogger");
+
+    public Introducer(int port) throws SecurityException, IOException {
         this.port = port;
         recentJoins = new LinkedList<MemberListEntry>();
+
+        Handler fh = new FileHandler("/srv/mp2_logs/introducer.log");
+        fh.setFormatter(new SimpleFormatter());
+        logger.setUseParentHandlers(false);
+        logger.addHandler(fh);
     }
 
     public void start() throws InterruptedException {
+        logger.info("Introducer started");
         Joiner newjoin = new Joiner(this.port);
         newjoin.start();
-        // TODO: process to run fault detection. either print membership list, leave or join.
-        // newjoin.setEnd();
-        // newjoin.join();
     }
 
     private class Joiner extends Thread {
@@ -50,17 +60,17 @@ public class Introducer {
                 server = new ServerSocket(this.port);
 
                 while (!end.get()){
-                    System.out.println("Waiting for request at " + server.toString());
+                    logger.info("Waiting for request at " + server.toString());
                     Socket request = server.accept();
-                    System.out.println("Connection established on port " + request.getLocalPort() + " with " + request.toString());
+                    logger.info("Connection established on port " + request.getLocalPort() + " with " + request.toString());
                     ObjectOutputStream output = new ObjectOutputStream(request.getOutputStream());
                     ObjectInputStream input = new ObjectInputStream(request.getInputStream());
-                    System.out.println("IO Streams created");
+                    logger.info("IO Streams created");
 
                     MemberListEntry newEntry;
                     try {
                         newEntry = (MemberListEntry) input.readObject();
-                        System.out.println("Member joining: " + newEntry.toString());
+                        logger.info("Member joining: " + newEntry.toString());
                     } catch (ClassNotFoundException e) {
                         e.printStackTrace();
                         continue;
@@ -71,11 +81,17 @@ public class Introducer {
                     while (groupMember != null) {
                         try {
                             Socket tryConnection = new Socket(groupMember.getHostname(), groupMember.getPort());
+                            logger.info("Found living process: " + groupMember.getHostname() + ":" + groupMember.getPort());
+
                             ObjectOutputStream tryConnectionOutput = new ObjectOutputStream(tryConnection.getOutputStream());
                             ObjectInputStream tryConnectionInput = new ObjectInputStream(tryConnection.getInputStream());
 
-                            tryConnectionOutput.writeObject(new TCPMessage(MessageType.IntroducerCheckAlive, null));
+                            Message checkAlive = new Message(MessageType.IntroducerCheckAlive, null);
+
+                            tryConnectionOutput.writeObject(checkAlive);
                             tryConnectionOutput.flush();
+
+                            logger.info("JOIN: Sent " + ObjectSize.sizeInBytes(checkAlive) + " bytes over TCP");
 
                             tryConnectionInput.close();
                             tryConnectionOutput.close();
@@ -83,13 +99,22 @@ public class Introducer {
                             break;
                         } catch (Exception e) {
                             // remove faulty/left process and choose next one
+                            logger.info("Process no longer joined: " + groupMember.getHostname() + ":" + groupMember.getPort());
                             recentJoins.poll();
                             groupMember = recentJoins.peek();
                         }
                     }
 
                     output.writeObject(groupMember);
+                    logger.info("JOIN: Sent " + ObjectSize.sizeInBytes(groupMember) + " bytes over TCP");
+                    if (groupMember != null) {
+                        logger.info("Living process sent to newly joined process");
+                    } else {
+                        logger.info("Newly joined process is the first group member");
+                    }
+                    
                     output.flush();
+
                     input.close();
                     output.close();
                     request.close();

@@ -4,7 +4,7 @@ import java.io.Serializable;
 
 import com.cs425.membership.MembershipList.MemberListEntry;
 
-public class TCPMessage implements Serializable {
+public class Message implements Serializable {
     public static enum MessageType {
         Join,
         Leave,
@@ -18,7 +18,7 @@ public class TCPMessage implements Serializable {
     private MessageType messageType;
     private MemberListEntry subjectEntry;
 
-    public TCPMessage(MessageType messageType, MemberListEntry subjectEntry) {
+    public Message(MessageType messageType, MemberListEntry subjectEntry) {
         this.messageType = messageType;
         this.subjectEntry = subjectEntry;
     }

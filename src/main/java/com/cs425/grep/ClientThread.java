@@ -78,7 +78,9 @@ public class ClientThread extends Thread {
         // Print results
         printLock.lock();
         if (response.isInitialized()) {
+            System.out.println(ip + ":");
             response.print();
+            System.out.println("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
         } else {
             System.out.println("Machine (IP: " + ip + ", Port: " + port + ") offline.");
         }
